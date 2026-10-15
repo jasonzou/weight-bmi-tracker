@@ -6,5 +6,6 @@
   "description": "Track daily weight, visualize trends, and automatically calculate & chart BMI.",
   "author": "Jason Zou",
   "authorUrl": "mailto:jason.zou@gmail.com",
-  "isDesktopOnly": false
+  "isDesktopOnly": false,
+  "fundingUrl": "https://buymeacoffee.com"
 }
