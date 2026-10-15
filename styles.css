@@ -1,11 +1,12 @@
 .weight-tracker-dashboard {
   max-height: 85vh;
   overflow-y: auto;
+  padding: 5px;
 }
 
 .tracker-stats {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin: 16px 0;
 }
@@ -37,7 +38,7 @@
 }
 
 .tracker-charts canvas {
-  max-height: 280px;
+  max-height: 400px;
   width: 100% !important;
 }
 
@@ -56,8 +57,25 @@
   max-width: min(1120px, 92vw);
 }
 
+.tracker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding-right: 2rem;
+}
+
+.tracker-header h2 {
+  margin: 0;
+}
+
 .tracker-actions {
   display: flex;
   gap: 8px;
-  margin-top: 12px;
+  flex-shrink: 0;
+}
+
+.tracker-custom-days {
+  width: 90px;
 }

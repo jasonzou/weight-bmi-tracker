@@ -9,7 +9,7 @@ Track daily weight, visualize trends, automatically calculate + chart BMI, and i
 - BMI trend chart with category-colored points
 - Duplicate entries for the same day are replaced
 - Configurable units (kg / lbs), height, and BMI thresholds
-- Dashboard display range: last 10, 15, 30, or 60 days, or all
+- Dashboard display range: last 10, 15, 30, or 60 days, all, or a custom 1–99999 days
 - Import previous weight data from CSV or JSON (paste or file)
 - Export your data as CSV or JSON (copy to clipboard or save into the vault)
 
@@ -24,7 +24,7 @@ Track daily weight, visualize trends, automatically calculate + chart BMI, and i
 - Command palette → "Add Today's Weight"
 - Command palette → "Import Previous Weight Data" (also an **Import Data** button on the dashboard)
 - Command palette → "Export Weight Data" (also an **Export Data** button on the dashboard)
-- Dashboard → **Display range**: last 10, 15, 30, or 60 days, or all
+- Dashboard → **Display range**: last 10, 15, 30, or 60 days, all, or custom (1–99999 days)
 
 ## Import / Export
 

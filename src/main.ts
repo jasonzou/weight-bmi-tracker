@@ -233,7 +233,8 @@ class TrackerDashboardModal extends Modal {
   plugin: WeightBMITracker;
   weightChart: Chart | null = null;
   bmiChart: Chart | null = null;
-  range: "10" | "15" | "30" | "60" | "all" = "all";
+  range: "10" | "15" | "30" | "60" | "all" | "custom" = "all";
+  private customDays = 30;
 
   constructor(app: any, plugin: WeightBMITracker) {
     super(app);
@@ -250,7 +251,30 @@ class TrackerDashboardModal extends Modal {
     contentEl.empty();
     contentEl.addClass("weight-tracker-dashboard");
 
-    contentEl.createEl("h2", { text: "Weight & BMI Dashboard" });
+    const header = contentEl.createDiv({ cls: "tracker-header" });
+    header.createEl("h2", { text: "Weight & BMI Dashboard" });
+
+    const actions = header.createDiv({ cls: "tracker-actions" });
+    const addBtn = actions.createEl("button", {
+      text: "Add Today's Weight",
+      cls: "mod-cta",
+    });
+    addBtn.addEventListener("click", () => {
+      this.close();
+      this.plugin.addTodaysWeight();
+    });
+
+    const importBtn = actions.createEl("button", { text: "Import Data" });
+    importBtn.addEventListener("click", () => {
+      this.close();
+      this.plugin.importWeightData();
+    });
+
+    const exportBtn = actions.createEl("button", { text: "Export Data" });
+    exportBtn.addEventListener("click", () => {
+      this.close();
+      this.plugin.exportWeightData();
+    });
 
     new Setting(contentEl)
       .setName("Display range")
@@ -262,12 +286,34 @@ class TrackerDashboardModal extends Modal {
           .addOption("30", "Last 30 days")
           .addOption("60", "Last 60 days")
           .addOption("all", "All days")
+          .addOption("custom", "Custom days…")
           .setValue(this.range)
-          .onChange((value: "10" | "15" | "30" | "60" | "all") => {
-            this.range = value;
+          .onChange(
+            (
+              value: "10" | "15" | "30" | "60" | "all" | "custom"
+            ) => {
+              this.range = value;
+              this.renderDashboard();
+            }
+          )
+      )
+      .addText((text) => {
+        text.inputEl.type = "number";
+        text.inputEl.min = "1";
+        text.inputEl.max = "99999";
+        text.inputEl.addClass("tracker-custom-days");
+        text.setPlaceholder("30").setValue(String(this.customDays));
+        text.inputEl.style.display = this.range === "custom" ? "" : "none";
+        text.inputEl.addEventListener("change", () => {
+          const n = Number(text.inputEl.value);
+          if (Number.isInteger(n) && n >= 1 && n <= 99999) {
+            this.customDays = n;
             this.renderDashboard();
-          })
-      );
+          } else {
+            text.inputEl.value = String(this.customDays);
+          }
+        });
+      });
 
     const data = this.getFilteredData();
     if (data.length === 0) {
@@ -305,28 +351,6 @@ class TrackerDashboardModal extends Modal {
     const weightCanvas = chartsDiv.createEl("canvas");
     const bmiCanvas = chartsDiv.createEl("canvas");
 
-    const actions = contentEl.createDiv({ cls: "tracker-actions" });
-    const addBtn = actions.createEl("button", {
-      text: "Add Today's Weight",
-      cls: "mod-cta",
-    });
-    addBtn.addEventListener("click", () => {
-      this.close();
-      this.plugin.addTodaysWeight();
-    });
-
-    const importBtn = actions.createEl("button", { text: "Import Data" });
-    importBtn.addEventListener("click", () => {
-      this.close();
-      this.plugin.importWeightData();
-    });
-
-    const exportBtn = actions.createEl("button", { text: "Export Data" });
-    exportBtn.addEventListener("click", () => {
-      this.close();
-      this.plugin.exportWeightData();
-    });
-
     window.setTimeout(() => {
       this.renderWeightChart(weightCanvas);
       this.renderBMIChart(bmiCanvas);
@@ -337,7 +361,8 @@ class TrackerDashboardModal extends Modal {
     const data = this.plugin.weightData;
     if (this.range === "all" || data.length === 0) return data;
 
-    const days = parseInt(this.range, 10);
+    const days =
+      this.range === "custom" ? this.customDays : parseInt(this.range, 10);
     const latest = new Date(data[data.length - 1].date).getTime();
     const cutoff = latest - (days - 1) * 24 * 60 * 60 * 1000;
     return data.filter((e) => new Date(e.date).getTime() >= cutoff);

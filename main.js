@@ -14993,6 +14993,7 @@ var TrackerDashboardModal = class extends import_obsidian4.Modal {
     this.weightChart = null;
     this.bmiChart = null;
     this.range = "all";
+    this.customDays = 30;
     this.plugin = plugin;
   }
   onOpen() {
@@ -15003,13 +15004,51 @@ var TrackerDashboardModal = class extends import_obsidian4.Modal {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass("weight-tracker-dashboard");
-    contentEl.createEl("h2", { text: "Weight & BMI Dashboard" });
+    const header = contentEl.createDiv({ cls: "tracker-header" });
+    header.createEl("h2", { text: "Weight & BMI Dashboard" });
+    const actions = header.createDiv({ cls: "tracker-actions" });
+    const addBtn = actions.createEl("button", {
+      text: "Add Today's Weight",
+      cls: "mod-cta"
+    });
+    addBtn.addEventListener("click", () => {
+      this.close();
+      this.plugin.addTodaysWeight();
+    });
+    const importBtn = actions.createEl("button", { text: "Import Data" });
+    importBtn.addEventListener("click", () => {
+      this.close();
+      this.plugin.importWeightData();
+    });
+    const exportBtn = actions.createEl("button", { text: "Export Data" });
+    exportBtn.addEventListener("click", () => {
+      this.close();
+      this.plugin.exportWeightData();
+    });
     new import_obsidian4.Setting(contentEl).setName("Display range").setDesc("Show the most recent entries").addDropdown(
-      (dd) => dd.addOption("10", "Last 10 days").addOption("15", "Last 15 days").addOption("30", "Last 30 days").addOption("60", "Last 60 days").addOption("all", "All days").setValue(this.range).onChange((value) => {
-        this.range = value;
-        this.renderDashboard();
-      })
-    );
+      (dd) => dd.addOption("10", "Last 10 days").addOption("15", "Last 15 days").addOption("30", "Last 30 days").addOption("60", "Last 60 days").addOption("all", "All days").addOption("custom", "Custom days\u2026").setValue(this.range).onChange(
+        (value) => {
+          this.range = value;
+          this.renderDashboard();
+        }
+      )
+    ).addText((text) => {
+      text.inputEl.type = "number";
+      text.inputEl.min = "1";
+      text.inputEl.max = "99999";
+      text.inputEl.addClass("tracker-custom-days");
+      text.setPlaceholder("30").setValue(String(this.customDays));
+      text.inputEl.style.display = this.range === "custom" ? "" : "none";
+      text.inputEl.addEventListener("change", () => {
+        const n = Number(text.inputEl.value);
+        if (Number.isInteger(n) && n >= 1 && n <= 99999) {
+          this.customDays = n;
+          this.renderDashboard();
+        } else {
+          text.inputEl.value = String(this.customDays);
+        }
+      });
+    });
     const data = this.getFilteredData();
     if (data.length === 0) {
       contentEl.createEl("p", {
@@ -15042,25 +15081,6 @@ var TrackerDashboardModal = class extends import_obsidian4.Modal {
     const chartsDiv = contentEl.createDiv({ cls: "tracker-charts" });
     const weightCanvas = chartsDiv.createEl("canvas");
     const bmiCanvas = chartsDiv.createEl("canvas");
-    const actions = contentEl.createDiv({ cls: "tracker-actions" });
-    const addBtn = actions.createEl("button", {
-      text: "Add Today's Weight",
-      cls: "mod-cta"
-    });
-    addBtn.addEventListener("click", () => {
-      this.close();
-      this.plugin.addTodaysWeight();
-    });
-    const importBtn = actions.createEl("button", { text: "Import Data" });
-    importBtn.addEventListener("click", () => {
-      this.close();
-      this.plugin.importWeightData();
-    });
-    const exportBtn = actions.createEl("button", { text: "Export Data" });
-    exportBtn.addEventListener("click", () => {
-      this.close();
-      this.plugin.exportWeightData();
-    });
     window.setTimeout(() => {
       this.renderWeightChart(weightCanvas);
       this.renderBMIChart(bmiCanvas);
@@ -15070,7 +15090,7 @@ var TrackerDashboardModal = class extends import_obsidian4.Modal {
     const data = this.plugin.weightData;
     if (this.range === "all" || data.length === 0)
       return data;
-    const days = parseInt(this.range, 10);
+    const days = this.range === "custom" ? this.customDays : parseInt(this.range, 10);
     const latest = new Date(data[data.length - 1].date).getTime();
     const cutoff = latest - (days - 1) * 24 * 60 * 60 * 1e3;
     return data.filter((e) => new Date(e.date).getTime() >= cutoff);
