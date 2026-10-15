@@ -1,0 +1,63 @@
+.weight-tracker-dashboard {
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.tracker-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.stat-card {
+  background: var(--background-secondary);
+  border-radius: 8px;
+  padding: 12px 16px;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.stat-label {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 1.2em;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.tracker-charts {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 16px;
+}
+
+.tracker-charts canvas {
+  max-height: 280px;
+  width: 100% !important;
+}
+
+.import-textarea {
+  width: 100%;
+  min-height: 180px;
+  font-family: var(--font-monospace);
+  font-size: 0.9em;
+  margin-bottom: 8px;
+  resize: vertical;
+}
+
+/* Dashboard modal: about twice the default modal width */
+.modal.weight-tracker-modal-wide {
+  width: min(1120px, 92vw);
+  max-width: min(1120px, 92vw);
+}
+
+.tracker-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
