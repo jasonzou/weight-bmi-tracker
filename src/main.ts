@@ -289,6 +289,19 @@ class TrackerDashboardModal extends Modal {
       this.plugin.exportWeightData();
     });
 
+    const layoutBtn = actions.createEl("button", {
+      text:
+        this.plugin.settings.chartLayout === "tabs"
+          ? "Stacked view"
+          : "Tabbed view",
+    });
+    layoutBtn.addEventListener("click", () => {
+      this.plugin.settings.chartLayout =
+        this.plugin.settings.chartLayout === "tabs" ? "stacked" : "tabs";
+      void this.plugin.saveSettings();
+      this.renderDashboard();
+    });
+
     new Setting(contentEl)
       .setName("Display range")
       .setDesc("Show the most recent entries")
@@ -362,31 +375,46 @@ class TrackerDashboardModal extends Modal {
 
     const chartsDiv = contentEl.createDiv({ cls: "tracker-charts" });
 
-    const tabs = chartsDiv.createDiv({ cls: "tracker-tabs" });
-    const card = chartsDiv.createDiv({ cls: "tracker-chart-card" });
-    const canvas = card.createEl("canvas");
+    if (this.plugin.settings.chartLayout === "tabs") {
+      const tabs = chartsDiv.createDiv({ cls: "tracker-tabs" });
+      const card = chartsDiv.createDiv({ cls: "tracker-chart-card" });
+      const canvas = card.createEl("canvas");
 
-    const buttons = new Map<"weight" | "bmi", HTMLButtonElement>();
-    const tabDefs: Array<{ id: "weight" | "bmi"; label: string }> = [
-      { id: "weight", label: "Weight trend" },
-      { id: "bmi", label: "BMI trend" },
-    ];
-    for (const tab of tabDefs) {
-      const btn = tabs.createEl("button", {
-        text: tab.label,
-        cls: "tracker-tab",
-      });
-      if (this.activeChart === tab.id) btn.addClass("is-active");
-      btn.addEventListener("click", () => {
-        if (this.activeChart === tab.id) return;
-        this.activeChart = tab.id;
-        buttons.forEach((b, id) => b.toggleClass("is-active", id === tab.id));
-        this.renderActiveChart(canvas);
-      });
-      buttons.set(tab.id, btn);
+      const buttons = new Map<"weight" | "bmi", HTMLButtonElement>();
+      const tabDefs: Array<{ id: "weight" | "bmi"; label: string }> = [
+        { id: "weight", label: "Weight trend" },
+        { id: "bmi", label: "BMI trend" },
+      ];
+      for (const tab of tabDefs) {
+        const btn = tabs.createEl("button", {
+          text: tab.label,
+          cls: "tracker-tab",
+        });
+        if (this.activeChart === tab.id) btn.addClass("is-active");
+        btn.addEventListener("click", () => {
+          if (this.activeChart === tab.id) return;
+          this.activeChart = tab.id;
+          buttons.forEach((b, id) =>
+            b.toggleClass("is-active", id === tab.id)
+          );
+          this.renderActiveChart(canvas);
+        });
+        buttons.set(tab.id, btn);
+      }
+
+      window.setTimeout(() => this.renderActiveChart(canvas), 30);
+    } else {
+      const weightCard = chartsDiv.createDiv({ cls: "tracker-chart-card" });
+      const bmiCard = chartsDiv.createDiv({ cls: "tracker-chart-card" });
+      const weightCanvas = weightCard.createEl("canvas");
+      const bmiCanvas = bmiCard.createEl("canvas");
+
+      window.setTimeout(() => {
+        this.destroyCharts();
+        this.renderWeightChart(weightCanvas);
+        this.renderBMIChart(bmiCanvas);
+      }, 30);
     }
-
-    window.setTimeout(() => this.renderActiveChart(canvas), 30);
   }
 
   private getFilteredData(): WeightEntry[] {

@@ -9,6 +9,8 @@ export interface TrackerSettings {
   unit: "kg" | "lbs";
   heightUnit: "cm" | "ft";
   weightTarget: number;
+  // Dashboard chart layout: one at a time behind tabs, or both stacked.
+  chartLayout: "tabs" | "stacked";
   bmiCategories: {
     underweight: number;
     normal: number;
@@ -21,6 +23,7 @@ export const DEFAULT_SETTINGS: TrackerSettings = {
   unit: "kg",
   heightUnit: "cm",
   weightTarget: 70,
+  chartLayout: "tabs",
   bmiCategories: {
     underweight: 18.5,
     normal: 25,
