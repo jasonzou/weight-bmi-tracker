@@ -10,9 +10,12 @@ on:
       - "*"
 
 # softprops/action-gh-release needs write access to create releases and
-# upload assets.
+# upload assets. actions/attest-build-provenance needs `id-token: write`
+# so it can mint a Sigstore-signed provenance attestation for each asset.
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   build:
@@ -49,6 +52,23 @@ jobs:
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      # Mint a Sigstore-signed build provenance attestation for each release
+      # asset. This is what makes the GitHub UI show the green “Verified”
+      # badge on main.js / manifest.json and what lets users cryptographically
+      # confirm those assets really came from this workflow run (and not, for
+      # example, a tampered replacement uploaded through the GitHub web UI).
+      - name: Attest main.js
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: main.js
+          subject-name: main.js
+
+      - name: Attest manifest.json
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: manifest.json
+          subject-name: manifest.json
 
       - name: Create or update GitHub Release
         uses: softprops/action-gh-release@v2
