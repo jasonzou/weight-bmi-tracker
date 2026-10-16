@@ -32,7 +32,7 @@ export class ExportWeightModal extends Modal {
     contentEl.createEl("h2", { text: "Export Weight Data" });
 
     contentEl.createEl("p", {
-      text: `Ready to export ${this.entries.length} entries. Copy it, or save it into your vault.`,
+      text: `Ready to export ${this.entries.length} entries. Select the text below to copy it, or save it into your vault.`,
       cls: "setting-item-description",
     });
 
@@ -40,6 +40,10 @@ export class ExportWeightModal extends Modal {
     preview.rows = 12;
     preview.readOnly = true;
     preview.value = this.serialize();
+    // This plugin deliberately avoids the system paste buffer: clicking or
+    // focusing the read-only preview selects everything so the user can copy
+    // it with their own shortcut; the "Select all" button does the same.
+    preview.addEventListener("focus", () => preview.select());
 
     new Setting(contentEl)
       .setName("Format")
@@ -59,14 +63,13 @@ export class ExportWeightModal extends Modal {
 
     new Setting(contentEl)
       .setName("Export")
+      .setDesc(
+        "Select the text above and copy it with your system shortcut, or save it into your vault."
+      )
       .addButton((btn) =>
-        btn.setButtonText("Copy to clipboard").onClick(async () => {
-          try {
-            await navigator.clipboard.writeText(preview.value);
-            new Notice("Weight data copied to clipboard.");
-          } catch (err) {
-            new Notice("Copy failed: " + (err as Error).message);
-          }
+        btn.setButtonText("Select all").onClick(() => {
+          preview.focus();
+          preview.select();
         })
       )
       .addButton((btn) =>
