@@ -1,4 +1,4 @@
-import { Plugin, Notice, Modal, Setting } from "obsidian";
+import { Plugin, Notice, Modal, Setting, App } from "obsidian";
 import Chart from "chart.js/auto";
 import { TrackerSettingTab } from "./settings";
 import { ImportWeightModal } from "./importModal";
@@ -26,15 +26,15 @@ export default class WeightBMITracker extends Plugin {
     this.addCommand({
       id: "add-todays-weight",
       name: "Add Today's Weight",
-      callback: () => this.addTodaysWeight(),
+      callback: () => void this.addTodaysWeight(),
     });
 
     this.addCommand({
       id: "open-weight-tracker",
       name: "Open Weight Tracker Dashboard",
       callback: () => this.openTrackerModal(),
-    }); 
-    
+    });
+
     this.addCommand({
       id: "import-weight-data",
       name: "Import Previous Weight Data",
@@ -185,7 +185,7 @@ class WeightInputModal extends Modal {
   onSubmit: (weight: number) => void;
   weight: string = "";
 
-  constructor(app: any, onSubmit: (weight: number) => void) {
+  constructor(app: App, onSubmit: (weight: number) => void) {
     super(app);
     this.onSubmit = onSubmit;
   }
@@ -236,7 +236,7 @@ class TrackerDashboardModal extends Modal {
   range: "10" | "15" | "30" | "60" | "all" | "custom" = "all";
   private customDays = 30;
 
-  constructor(app: any, plugin: WeightBMITracker) {
+  constructor(app: App, plugin: WeightBMITracker) {
     super(app);
     this.plugin = plugin;
   }
@@ -261,7 +261,7 @@ class TrackerDashboardModal extends Modal {
     });
     addBtn.addEventListener("click", () => {
       this.close();
-      this.plugin.addTodaysWeight();
+      void this.plugin.addTodaysWeight();
     });
 
     const importBtn = actions.createEl("button", { text: "Import Data" });
@@ -348,8 +348,10 @@ class TrackerDashboardModal extends Modal {
     });
 
     const chartsDiv = contentEl.createDiv({ cls: "tracker-charts" });
-    const weightCanvas = chartsDiv.createEl("canvas");
-    const bmiCanvas = chartsDiv.createEl("canvas");
+    const weightCard = chartsDiv.createDiv({ cls: "tracker-chart-card" });
+    const bmiCard = chartsDiv.createDiv({ cls: "tracker-chart-card" });
+    const weightCanvas = weightCard.createEl("canvas");
+    const bmiCanvas = bmiCard.createEl("canvas");
 
     window.setTimeout(() => {
       this.renderWeightChart(weightCanvas);

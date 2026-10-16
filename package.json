@@ -1,6 +1,6 @@
 {
   "name": "weight-bmi-tracker",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Weight and BMI tracker for Obsidian",
   "author": "Jason Zou <jason.zou@gmail.com>",
   "main": "main.js",
@@ -9,11 +9,16 @@
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "version": "node -p \"require('./manifest.json').version\""
   },
-  "keywords": ["obsidian", "plugin", "weight", "bmi", "tracker"],
+  "keywords": [
+    "obsidian",
+    "plugin",
+    "weight",
+    "bmi",
+    "tracker"
+  ],
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "builtin-modules": "^3.3.0",
     "esbuild": "^0.20.0",
     "obsidian": "latest",
     "tslib": "^2.6.0",

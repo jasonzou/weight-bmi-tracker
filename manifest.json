@@ -1,8 +1,8 @@
 {
   "id": "weight-bmi-tracker",
   "name": "Weight BMI Tracker",
-  "version": "1.0.2",
-  "minAppVersion": "1.0.2",
+  "version": "1.0.3",
+  "minAppVersion": "1.0.1",
   "description": "Track daily weight, visualize trends, and automatically calculate & chart BMI.",
   "author": "Jason Zou",
   "authorUrl": "https://github.com/jasonzou",

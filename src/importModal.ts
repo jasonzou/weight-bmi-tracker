@@ -1,5 +1,4 @@
 import { App, Modal, Notice, Setting } from "obsidian";
-import { WeightEntry } from "./types";
 
 interface ParsedRow {
   date: string;
@@ -43,8 +42,6 @@ export class ImportWeightModal extends Modal {
     ta.placeholder =
       "2026-10-01,74.2\n2026-10-02,74.0\n2026-10-03,73.8";
     ta.rows = 10;
-    ta.style.width = "100%";
-    ta.style.fontFamily = "var(--font-monospace)";
     ta.addEventListener("input", () => {
       this.text = ta.value;
     });
@@ -55,11 +52,15 @@ export class ImportWeightModal extends Modal {
       .setDesc("Accepts .csv or .json")
       .addButton((btn) =>
         btn.setButtonText("Choose file…").onClick(() => {
-          const input = document.createElement("input");
+          // Attach the input under the modal so Obsidian's createEl wrapper
+          // applies, then remove it once we have the chosen file.
+          const input = contentEl.createEl("input");
           input.type = "file";
           input.accept = ".csv,.json,text/csv,application/json";
+          input.style.display = "none";
           input.onchange = async () => {
             const file = input.files?.[0];
+            input.remove();
             if (!file) return;
             const content = await file.text();
             ta.value = content;
@@ -87,9 +88,8 @@ export class ImportWeightModal extends Modal {
     // --- Import button ---
     const importBtn = contentEl.createEl("button", {
       text: "Import",
-      cls: "mod-cta",
+      cls: "mod-cta import-btn",
     });
-    importBtn.style.marginTop = "12px";
     importBtn.addEventListener("click", () => {
       const result = parseInput(this.text);
       if (result.errors.length && result.entries.length === 0) {
@@ -115,6 +115,28 @@ export class ImportWeightModal extends Modal {
   }
 }
 
+interface RawJsonItem {
+  date?: unknown;
+  weight?: unknown;
+}
+
+interface RawJsonInput {
+  weightData?: RawJsonItem[];
+}
+
+function asRawItemArray(input: unknown): RawJsonItem[] | null {
+  if (Array.isArray(input)) {
+    return input as RawJsonItem[];
+  }
+  if (input && typeof input === "object") {
+    const obj = input as RawJsonInput;
+    if (Array.isArray(obj.weightData)) {
+      return obj.weightData;
+    }
+  }
+  return null;
+}
+
 /** Parses CSV or JSON text into date/weight rows. */
 export function parseInput(raw: string): ImportResult {
   const text = raw.trim();
@@ -126,14 +148,17 @@ export function parseInput(raw: string): ImportResult {
   // Try JSON first
   if (text.startsWith("[") || text.startsWith("{")) {
     try {
-      const parsed = JSON.parse(text);
-      const arr = Array.isArray(parsed) ? parsed : parsed.weightData;
-      if (!Array.isArray(arr)) {
-        return { entries, errors: ["JSON must be an array or contain weightData[]."] };
+      const parsed: unknown = JSON.parse(text);
+      const arr = asRawItemArray(parsed);
+      if (!arr) {
+        return {
+          entries,
+          errors: ["JSON must be an array or contain weightData[]."],
+        };
       }
       for (const item of arr) {
-        const date = String(item?.date ?? "").trim();
-        const weight = parseFloat(item?.weight);
+        const date = String(item.date ?? "").trim();
+        const weight = parseFloat(String(item.weight ?? ""));
         if (!isValidDate(date) || isNaN(weight)) {
           errors.push(`Skipped invalid row: ${JSON.stringify(item)}`);
           continue;
@@ -142,7 +167,8 @@ export function parseInput(raw: string): ImportResult {
       }
       return { entries, errors };
     } catch (e) {
-      errors.push("Invalid JSON: " + (e as Error).message);
+      const msg = e instanceof Error ? e.message : String(e);
+      errors.push("Invalid JSON: " + msg);
       return { entries, errors };
     }
   }

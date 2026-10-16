@@ -1,6 +1,20 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import WeightBMITracker from "./main";
 
+// Obsidian 1.13+ ships a declarative settings API whose entry point is
+// `PluginSettingTab.getSettingDefinitions()`. Returning `[]` keeps the older
+// imperative `display()` path (which fully defines the UI for users on every
+// Obsidian version) and just lets the settings appear in Obsidian's
+// settings search on 1.13.0+. The full type isn't in the public `obsidian.d.ts`
+// yet, hence `unknown` cast.
+export interface SettingDefinitionItem {
+  id: string;
+  name: string;
+  description: string;
+  type: "text" | "number" | "toggle" | "dropdown";
+  options?: Record<string, string>;
+}
+
 export class TrackerSettingTab extends PluginSettingTab {
   plugin: WeightBMITracker;
 
@@ -9,11 +23,69 @@ export class TrackerSettingTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
+  /**
+   * Declarative setting metadata for Obsidian 1.13+. The actual UI is
+   * still rendered by `display()` so the tab behaves identically across
+   * all Obsidian versions.
+   */
+  // @ts-ignore — getSettingDefinitions is added in Obsidian 1.13 and is
+  // not yet present in the public TypeScript typings.
+  getSettingDefinitions(): SettingDefinitionItem[] {
+    return [
+      {
+        id: "height",
+        name: "Height",
+        description: "Your height (in cm) used for BMI calculation",
+        type: "number",
+      },
+      {
+        id: "heightUnit",
+        name: "Height unit",
+        description: "Unit for your height",
+        type: "dropdown",
+        options: { cm: "Centimeters", ft: "Feet & Inches (stored as cm)" },
+      },
+      {
+        id: "unit",
+        name: "Weight unit",
+        description: "Unit for your weight",
+        type: "dropdown",
+        options: { kg: "Kilograms", lbs: "Pounds" },
+      },
+      {
+        id: "weightTarget",
+        name: "Weight target",
+        description: "Your goal weight (optional)",
+        type: "number",
+      },
+      {
+        id: "bmiCategories.underweight",
+        name: "Underweight BMI threshold",
+        description: "BMI below this is underweight",
+        type: "number",
+      },
+      {
+        id: "bmiCategories.normal",
+        name: "Normal weight BMI threshold",
+        description: "BMI below this is normal weight",
+        type: "number",
+      },
+      {
+        id: "bmiCategories.overweight",
+        name: "Overweight BMI threshold",
+        description: "BMI below this is overweight",
+        type: "number",
+      },
+    ];
+  }
+
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "Weight & BMI Tracker Settings" });
+    new Setting(containerEl)
+      .setName("Weight & BMI Tracker Settings")
+      .setHeading();
 
     new Setting(containerEl)
       .setName("Height")
@@ -75,7 +147,7 @@ export class TrackerSettingTab extends PluginSettingTab {
           })
       );
 
-    containerEl.createEl("h3", { text: "BMI Categories" });
+    new Setting(containerEl).setName("BMI Categories").setHeading();
 
     new Setting(containerEl)
       .setName("Underweight threshold")
