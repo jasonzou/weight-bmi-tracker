@@ -235,6 +235,7 @@ class TrackerDashboardModal extends Modal {
   bmiChart: Chart | null = null;
   range: "10" | "15" | "30" | "60" | "all" | "custom" = "all";
   private customDays = 30;
+  private activeChart: "weight" | "bmi" = "weight";
 
   constructor(app: App, plugin: WeightBMITracker) {
     super(app);
@@ -246,8 +247,7 @@ class TrackerDashboardModal extends Modal {
     this.renderDashboard();
   }
 
-  private renderDashboard() {
-    const { contentEl } = this;
+  private destroyCharts() {
     if (this.weightChart) {
       this.weightChart.destroy();
       this.weightChart = null;
@@ -256,6 +256,11 @@ class TrackerDashboardModal extends Modal {
       this.bmiChart.destroy();
       this.bmiChart = null;
     }
+  }
+
+  private renderDashboard() {
+    const { contentEl } = this;
+    this.destroyCharts();
     contentEl.empty();
     contentEl.addClass("weight-tracker-dashboard");
 
@@ -356,15 +361,32 @@ class TrackerDashboardModal extends Modal {
     });
 
     const chartsDiv = contentEl.createDiv({ cls: "tracker-charts" });
-    const weightCard = chartsDiv.createDiv({ cls: "tracker-chart-card" });
-    const bmiCard = chartsDiv.createDiv({ cls: "tracker-chart-card" });
-    const weightCanvas = weightCard.createEl("canvas");
-    const bmiCanvas = bmiCard.createEl("canvas");
 
-    window.setTimeout(() => {
-      this.renderWeightChart(weightCanvas);
-      this.renderBMIChart(bmiCanvas);
-    }, 30);
+    const tabs = chartsDiv.createDiv({ cls: "tracker-tabs" });
+    const card = chartsDiv.createDiv({ cls: "tracker-chart-card" });
+    const canvas = card.createEl("canvas");
+
+    const buttons = new Map<"weight" | "bmi", HTMLButtonElement>();
+    const tabDefs: Array<{ id: "weight" | "bmi"; label: string }> = [
+      { id: "weight", label: "Weight trend" },
+      { id: "bmi", label: "BMI trend" },
+    ];
+    for (const tab of tabDefs) {
+      const btn = tabs.createEl("button", {
+        text: tab.label,
+        cls: "tracker-tab",
+      });
+      if (this.activeChart === tab.id) btn.addClass("is-active");
+      btn.addEventListener("click", () => {
+        if (this.activeChart === tab.id) return;
+        this.activeChart = tab.id;
+        buttons.forEach((b, id) => b.toggleClass("is-active", id === tab.id));
+        this.renderActiveChart(canvas);
+      });
+      buttons.set(tab.id, btn);
+    }
+
+    window.setTimeout(() => this.renderActiveChart(canvas), 30);
   }
 
   private getFilteredData(): WeightEntry[] {
@@ -376,6 +398,15 @@ class TrackerDashboardModal extends Modal {
     const latest = new Date(data[data.length - 1].date).getTime();
     const cutoff = latest - (days - 1) * 24 * 60 * 60 * 1000;
     return data.filter((e) => new Date(e.date).getTime() >= cutoff);
+  }
+
+  private renderActiveChart(canvas: HTMLCanvasElement) {
+    this.destroyCharts();
+    if (this.activeChart === "weight") {
+      this.renderWeightChart(canvas);
+    } else {
+      this.renderBMIChart(canvas);
+    }
   }
 
   renderWeightChart(canvas: HTMLCanvasElement) {
