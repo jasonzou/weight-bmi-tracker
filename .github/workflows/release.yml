@@ -1,0 +1,64 @@
+name: Release Obsidian plugin
+
+# Runs on tag pushes like "1.0.1" or "v1.0.1". Builds main.js + manifest.json
+# and uploads them as GitHub Release assets, so the repo never has to carry
+# built artifacts.
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build main.js
+        run: npm run build
+
+      - name: Confirm build artifacts exist
+        run: |
+          test -f main.js || (echo "main.js missing after build" && exit 1)
+          test -f manifest.json || (echo "manifest.json missing after build" && exit 1)
+
+      - name: Read version from manifest.json
+        id: version
+        run: |
+          VERSION=$(node -p "require('./manifest.json').version")
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [ "$VERSION" != "$TAG" ] && [ "$VERSION" != "v$TAG" ]; then
+            echo "::error::manifest.json version ($VERSION) does not match tag ($TAG)"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "${{ steps.version.outputs.version }}"
+          body: |
+            ## Weight & BMI Tracker ${{ steps.version.outputs.version }}
+
+            Track daily weight, visualize trends, automatically calculate + chart BMI, and import or export your data.
+
+            See the [README](https://github.com/jasonzou/weight-bmi-tracker#readme) for installation and usage.
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            main.js
+            manifest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

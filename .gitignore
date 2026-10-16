@@ -147,3 +147,10 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Obsidian plugin: main.js is built by esbuild and uploaded to GitHub Releases
+# as a release asset (not committed to the repo). manifest.json IS kept in
+# the repo so the plugin folder can be installed by hand into .obsidian/plugins,
+# and is also uploaded to GitHub Releases as a release asset alongside main.js.
+main.js
+
