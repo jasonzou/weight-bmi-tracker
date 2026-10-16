@@ -11,13 +11,13 @@ export interface ImportResult {
 }
 
 export class ImportWeightModal extends Modal {
-  private onImport: (rows: ParsedRow[]) => void;
+  private onImport: (rows: ParsedRow[]) => void | Promise<void>;
   private text: string = "";
   private mode: "merge" | "replace" = "merge";
 
   constructor(
     app: App,
-    onImport: (rows: ParsedRow[], mode: "merge" | "replace") => void
+    onImport: (rows: ParsedRow[], mode: "merge" | "replace") => void | Promise<void>
   ) {
     super(app);
     // wrap so we can pass mode through
@@ -54,10 +54,9 @@ export class ImportWeightModal extends Modal {
         btn.setButtonText("Choose file…").onClick(() => {
           // Attach the input under the modal so Obsidian's createEl wrapper
           // applies, then remove it once we have the chosen file.
-          const input = contentEl.createEl("input");
+          const input = contentEl.createEl("input", { cls: "import-file-input" });
           input.type = "file";
           input.accept = ".csv,.json,text/csv,application/json";
-          input.style.display = "none";
           input.onchange = async () => {
             const file = input.files?.[0];
             input.remove();
@@ -100,7 +99,7 @@ export class ImportWeightModal extends Modal {
         new Notice("Nothing to import.");
         return;
       }
-      this.onImport(result.entries);
+      void this.onImport(result.entries);
       new Notice(
         `Imported ${result.entries.length} entr${
           result.entries.length === 1 ? "y" : "ies"
@@ -137,6 +136,20 @@ function asRawItemArray(input: unknown): RawJsonItem[] | null {
   return null;
 }
 
+/** Coerces a scalar JSON value to a string, avoiding "[object Object]". */
+function toScalarString(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return "";
+}
+
+/** Left-pads a 1- or 2-digit value to two characters. */
+function pad2(value: string): string {
+  return value.length >= 2 ? value : "0" + value;
+}
+
 /** Parses CSV or JSON text into date/weight rows. */
 export function parseInput(raw: string): ImportResult {
   const text = raw.trim();
@@ -157,8 +170,8 @@ export function parseInput(raw: string): ImportResult {
         };
       }
       for (const item of arr) {
-        const date = String(item.date ?? "").trim();
-        const weight = parseFloat(String(item.weight ?? ""));
+        const date = toScalarString(item.date).trim();
+        const weight = parseFloat(toScalarString(item.weight));
         if (!isValidDate(date) || isNaN(weight)) {
           errors.push(`Skipped invalid row: ${JSON.stringify(item)}`);
           continue;
@@ -206,12 +219,12 @@ function normalizeDate(s: string): string | null {
   const slash = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (slash) {
     const [, a, b, y] = slash;
-    return `${y}-${a.padStart(2, "0")}-${b.padStart(2, "0")}`;
+    return `${y}-${pad2(a)}-${pad2(b)}`;
   }
   const dot = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
   if (dot) {
     const [, d, m, y] = dot;
-    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    return `${y}-${pad2(m)}-${pad2(d)}`;
   }
   return null;
 }

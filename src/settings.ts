@@ -84,7 +84,7 @@ export class TrackerSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     new Setting(containerEl)
-      .setName("Weight & BMI Tracker Settings")
+      .setName("Body metrics")
       .setHeading();
 
     new Setting(containerEl)

@@ -182,10 +182,10 @@ export default class WeightBMITracker extends Plugin {
 // ---------- input modal ----------
 
 class WeightInputModal extends Modal {
-  onSubmit: (weight: number) => void;
+  onSubmit: (weight: number) => void | Promise<void>;
   weight: string = "";
 
-  constructor(app: App, onSubmit: (weight: number) => void) {
+  constructor(app: App, onSubmit: (weight: number) => void | Promise<void>) {
     super(app);
     this.onSubmit = onSubmit;
   }
@@ -214,7 +214,7 @@ class WeightInputModal extends Modal {
     btn.addEventListener("click", () => {
       const w = parseFloat(this.weight);
       if (!isNaN(w) && w > 0) {
-        this.onSubmit(w);
+        void this.onSubmit(w);
         this.close();
       } else {
         new Notice("Please enter a valid weight.");
@@ -248,6 +248,14 @@ class TrackerDashboardModal extends Modal {
 
   private renderDashboard() {
     const { contentEl } = this;
+    if (this.weightChart) {
+      this.weightChart.destroy();
+      this.weightChart = null;
+    }
+    if (this.bmiChart) {
+      this.bmiChart.destroy();
+      this.bmiChart = null;
+    }
     contentEl.empty();
     contentEl.addClass("weight-tracker-dashboard");
 
@@ -343,8 +351,8 @@ class TrackerDashboardModal extends Modal {
     ];
     stats.forEach((s) => {
       const card = statsDiv.createDiv({ cls: "stat-card" });
-      card.createEl("div", { text: s.label, cls: "stat-label" });
-      card.createEl("div", { text: s.value, cls: "stat-value" });
+      card.createDiv({ text: s.label, cls: "stat-label" });
+      card.createDiv({ text: s.value, cls: "stat-value" });
     });
 
     const chartsDiv = contentEl.createDiv({ cls: "tracker-charts" });
@@ -393,6 +401,7 @@ class TrackerDashboardModal extends Modal {
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: { title: { display: true, text: "Weight Trend" } },
         scales: {
           y: {
@@ -437,6 +446,7 @@ class TrackerDashboardModal extends Modal {
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: { title: { display: true, text: "BMI Trend" } },
         scales: {
           y: { beginAtZero: false, title: { display: true, text: "BMI" } },
