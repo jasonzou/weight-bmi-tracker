@@ -9,6 +9,11 @@ on:
     tags:
       - "*"
 
+# softprops/action-gh-release needs write access to create releases and
+# upload assets.
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,6 +25,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -47,10 +53,8 @@ jobs:
       - name: Create or update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "${{ steps.version.outputs.version }}"
+          name: "Weight & BMI Tracker ${{ steps.version.outputs.version }}"
           body: |
-            ## Weight & BMI Tracker ${{ steps.version.outputs.version }}
-
             Track daily weight, visualize trends, automatically calculate + chart BMI, and import or export your data.
 
             See the [README](https://github.com/jasonzou/weight-bmi-tracker#readme) for installation and usage.
