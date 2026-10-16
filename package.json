@@ -1,6 +1,6 @@
 {
   "name": "weight-bmi-tracker",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Weight and BMI tracker for Obsidian",
   "author": "Jason Zou <jason.zou@gmail.com>",
   "main": "main.js",
