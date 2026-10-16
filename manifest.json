@@ -1,11 +1,11 @@
 {
   "id": "weight-bmi-tracker",
   "name": "Weight BMI Tracker",
-  "version": "1.0.0",
-  "minAppVersion": "1.0.0",
+  "version": "1.0.1",
+  "minAppVersion": "1.0.1",
   "description": "Track daily weight, visualize trends, and automatically calculate & chart BMI.",
   "author": "Jason Zou",
-  "authorUrl": "mailto:jason.zou@gmail.com",
+  "authorUrl": "https://github.com/jasonzou",
   "isDesktopOnly": false,
-  "fundingUrl": "https://buymeacoffee.com"
+  "fundingUrl": "https://buymeacoffee.com/jasonzou"
 }
