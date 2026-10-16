@@ -47,7 +47,9 @@
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
-  flex-direction: row;
+  /* Stacked: Weight Trend on top, BMI Trend below. Each card takes an
+     equal share of the height so both charts render at the same size. */
+  flex-direction: column;
   gap: 16px;
   margin-top: 0;
   width: 100%;
@@ -59,7 +61,8 @@
 
 .tracker-chart-card {
   position: relative;
-  flex: 1 1 50%;
+  flex: 1 1 0;
+  width: 100%;
   min-width: 0;
   min-height: 0;
 }
