@@ -10,9 +10,38 @@ import {
   WeightEntry,
 } from "./types";
 
+/** Accepts only well-formed entries; drops anything that would break charts. */
+function normalizeWeightData(raw: unknown): WeightEntry[] {
+  if (!Array.isArray(raw)) return [];
+  const entries: WeightEntry[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const record = item as Record<string, unknown>;
+    const date = record.date;
+    const weight = record.weight;
+    if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      continue;
+    }
+    if (typeof weight !== "number" || !Number.isFinite(weight) || weight <= 0) {
+      continue;
+    }
+    const bmi = record.bmi;
+    entries.push({
+      date,
+      weight,
+      bmi: typeof bmi === "number" && Number.isFinite(bmi) ? bmi : 0,
+    });
+  }
+  return entries.sort((a, b) => a.date.localeCompare(b.date));
+}
+
 export default class WeightBMITracker extends Plugin {
-  settings: TrackerSettings;
+  settings: TrackerSettings = {
+    ...DEFAULT_DATA.settings,
+    bmiCategories: { ...DEFAULT_DATA.settings.bmiCategories },
+  };
   weightData: WeightEntry[] = [];
+  currentDashboard: TrackerDashboardModal | null = null;
 
   // ---------- lifecycle ----------
 
@@ -54,12 +83,35 @@ export default class WeightBMITracker extends Plugin {
 
   async loadAll() {
     const raw = (await this.loadData()) as Partial<PluginData> | null;
-    const merged: PluginData = {
-      settings: Object.assign({}, DEFAULT_DATA.settings, raw?.settings ?? {}),
-      weightData: raw?.weightData ?? [],
-    };
-    this.settings = merged.settings;
-    this.weightData = merged.weightData;
+    this.settings = Object.assign({}, DEFAULT_DATA.settings, raw?.settings ?? {});
+    this.weightData = normalizeWeightData(raw?.weightData).map((entry) => ({
+      date: entry.date,
+      weight: entry.weight,
+      bmi: entry.bmi > 0 ? entry.bmi : this.calculateBMI(entry.weight),
+    }));
+  }
+
+  /** Obsidian calls this when data.json is edited on disk (Sync, manual edits). */
+  async onExternalSettingsChange(): Promise<void> {
+    await this.reloadFromDisk();
+  }
+
+  private async reloadFromDisk(): Promise<void> {
+    const before = JSON.stringify({
+      settings: this.settings,
+      weightData: this.weightData,
+    });
+    try {
+      await this.loadAll();
+    } catch {
+      // The file may still be mid-write; the next external change retries.
+      return;
+    }
+    const after = JSON.stringify({
+      settings: this.settings,
+      weightData: this.weightData,
+    });
+    if (after !== before) this.currentDashboard?.refresh();
   }
 
   async persist() {
@@ -175,6 +227,7 @@ export default class WeightBMITracker extends Plugin {
 
   openTrackerModal() {
     const modal = new TrackerDashboardModal(this.app, this);
+    this.currentDashboard = modal;
     modal.open();
   }
 }
@@ -244,6 +297,12 @@ class TrackerDashboardModal extends Modal {
 
   onOpen() {
     this.modalEl.addClass("weight-tracker-modal-wide");
+    this.renderDashboard();
+  }
+
+  /** Re-render in place, e.g. after data.json changed on disk. */
+  refresh(): void {
+    if (!this.modalEl.isConnected) return;
     this.renderDashboard();
   }
 
@@ -519,5 +578,8 @@ class TrackerDashboardModal extends Modal {
     if (this.weightChart) this.weightChart.destroy();
     if (this.bmiChart) this.bmiChart.destroy();
     this.contentEl.empty();
+    if (this.plugin.currentDashboard === this) {
+      this.plugin.currentDashboard = null;
+    }
   }
 }
