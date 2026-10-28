@@ -114,6 +114,15 @@ export default class WeightBMITracker extends Plugin {
     if (after !== before) this.currentDashboard?.refresh();
   }
 
+  /**
+   * Manual reload for the dashboard's Refresh button: re-read data.json the
+   * same way an external file change does, and report the entry count.
+   */
+  async reloadFromDataFile(): Promise<number> {
+    await this.reloadFromDisk();
+    return this.weightData.length;
+  }
+
   async persist() {
     const data: PluginData = {
       settings: this.settings,
@@ -128,16 +137,6 @@ export default class WeightBMITracker extends Plugin {
 
   async saveWeightData() {
     await this.persist();
-  }
-
-  /**
-   * Re-read data.json from disk into memory and return the number of entries
-   * now loaded. Nothing is written back, so the file stays the source of
-   * truth for anyone editing it by hand or syncing it across devices.
-   */
-  async reloadFromDisk(): Promise<number> {
-    await this.loadAll();
-    return this.weightData.length;
   }
 
   // ---------- BMI ----------
@@ -298,7 +297,7 @@ class TrackerDashboardModal extends Modal {
   bmiChart: Chart | null = null;
   range: "10" | "15" | "30" | "60" | "all" | "custom" = "all";
   private customDays = 30;
-  private renderToken = 0;
+  private activeChart: "weight" | "bmi" = "weight";
 
   constructor(app: App, plugin: WeightBMITracker) {
     super(app);
@@ -316,6 +315,13 @@ class TrackerDashboardModal extends Modal {
     this.renderDashboard();
   }
 
+  /** Refresh button: re-read data.json and redraw from what it holds. */
+  private async reloadData(): Promise<void> {
+    const count = await this.plugin.reloadFromDataFile();
+    const label = count === 1 ? "entry" : "entries";
+    new Notice(`Reloaded data.json — ${count} ${label}`);
+  }
+
   private destroyCharts() {
     if (this.weightChart) {
       this.weightChart.destroy();
@@ -328,10 +334,6 @@ class TrackerDashboardModal extends Modal {
   }
 
   private renderDashboard() {
-    // The canvases below are about to be discarded; drop the charts bound to them.
-    this.destroyCharts();
-    const renderToken = ++this.renderToken;
-
     const { contentEl } = this;
     this.destroyCharts();
     contentEl.empty();
@@ -369,7 +371,20 @@ class TrackerDashboardModal extends Modal {
         title: "Reload data from data.json",
       },
     });
-    refreshBtn.addEventListener("click", () => void this.refreshData());
+    refreshBtn.addEventListener("click", () => void this.reloadData());
+
+    const layoutBtn = actions.createEl("button", {
+      text:
+        this.plugin.settings.chartLayout === "tabs"
+          ? "Stacked view"
+          : "Tabbed view",
+    });
+    layoutBtn.addEventListener("click", () => {
+      this.plugin.settings.chartLayout =
+        this.plugin.settings.chartLayout === "tabs" ? "stacked" : "tabs";
+      void this.plugin.saveSettings();
+      this.renderDashboard();
+    });
 
     new Setting(contentEl)
       .setName("Display range")
@@ -444,19 +459,46 @@ class TrackerDashboardModal extends Modal {
 
     const chartsDiv = contentEl.createDiv({ cls: "tracker-charts" });
 
-    window.setTimeout(() => {
-      // A newer render (or a closed modal) superseded this one.
-      if (renderToken !== this.renderToken) return;
-      this.renderWeightChart(weightCanvas);
-      this.renderBMIChart(bmiCanvas);
-    }, 30);
-  }
+    if (this.plugin.settings.chartLayout === "tabs") {
+      const tabs = chartsDiv.createDiv({ cls: "tracker-tabs" });
+      const card = chartsDiv.createDiv({ cls: "tracker-chart-card" });
+      const canvas = card.createEl("canvas");
 
-  private async refreshData() {
-    const count = await this.plugin.reloadFromDisk();
-    this.renderDashboard();
-    const label = count === 1 ? "entry" : "entries";
-    new Notice(`Reloaded data.json — ${count} ${label}`);
+      const buttons = new Map<"weight" | "bmi", HTMLButtonElement>();
+      const tabDefs: Array<{ id: "weight" | "bmi"; label: string }> = [
+        { id: "weight", label: "Weight trend" },
+        { id: "bmi", label: "BMI trend" },
+      ];
+      for (const tab of tabDefs) {
+        const btn = tabs.createEl("button", {
+          text: tab.label,
+          cls: "tracker-tab",
+        });
+        if (this.activeChart === tab.id) btn.addClass("is-active");
+        btn.addEventListener("click", () => {
+          if (this.activeChart === tab.id) return;
+          this.activeChart = tab.id;
+          buttons.forEach((b, id) =>
+            b.toggleClass("is-active", id === tab.id)
+          );
+          this.renderActiveChart(canvas);
+        });
+        buttons.set(tab.id, btn);
+      }
+
+      window.setTimeout(() => this.renderActiveChart(canvas), 30);
+    } else {
+      const weightCard = chartsDiv.createDiv({ cls: "tracker-chart-card" });
+      const bmiCard = chartsDiv.createDiv({ cls: "tracker-chart-card" });
+      const weightCanvas = weightCard.createEl("canvas");
+      const bmiCanvas = bmiCard.createEl("canvas");
+
+      window.setTimeout(() => {
+        this.destroyCharts();
+        this.renderWeightChart(weightCanvas);
+        this.renderBMIChart(bmiCanvas);
+      }, 30);
+    }
   }
 
   private getFilteredData(): WeightEntry[] {
@@ -557,20 +599,9 @@ class TrackerDashboardModal extends Modal {
     });
   }
 
-  private destroyCharts() {
-    if (this.weightChart) {
-      this.weightChart.destroy();
-      this.weightChart = null;
-    }
-    if (this.bmiChart) {
-      this.bmiChart.destroy();
-      this.bmiChart = null;
-    }
-  }
-
   onClose() {
-    this.renderToken++;
-    this.destroyCharts();
+    if (this.weightChart) this.weightChart.destroy();
+    if (this.bmiChart) this.bmiChart.destroy();
     this.contentEl.empty();
     if (this.plugin.currentDashboard === this) {
       this.plugin.currentDashboard = null;
