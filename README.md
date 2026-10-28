@@ -25,6 +25,7 @@ Track daily weight, visualize trends, automatically calculate + chart BMI, and i
 - Command palette → "Import Previous Weight Data" (also an **Import Data** button on the dashboard)
 - Command palette → "Export Weight Data" (also an **Export Data** button on the dashboard)
 - Dashboard → **Display range**: last 10, 15, 30, or 60 days, all, or custom (1–99999 days)
+- Dashboard → **Refresh**: re-read `data.json` (`<vault>/.obsidian/plugins/weight-bmi-tracker/data.json`) and redraw the dashboard. Useful after hand-editing or externally syncing that file — nothing is written back, so the file stays the source of truth.
 
 ## Import / Export
 
